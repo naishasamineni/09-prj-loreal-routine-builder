@@ -1,0 +1,6 @@
+name = "loreal-routine-worker"
+main = "worker.js"
+compatibility_date = "2025-01-15"
+
+[vars]
+OPENAI_MODEL = "gpt-5.4"
