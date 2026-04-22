@@ -1,4 +1,4 @@
-const WORKER_URL = "https://holy-star-046c.naisha-loreal.workers.dev/";
+const WORKER_URL = "https://bold-fog-4096.naisha-loreal.workers.dev/";
 
 const categoryFilter = document.getElementById("categoryFilter");
 const productSearch = document.getElementById("productSearch");
@@ -53,6 +53,7 @@ function saveSelections() {
 function loadSelections() {
   const saved = localStorage.getItem(STORAGE_KEYS.selectedProducts);
   if (!saved) return;
+
   try {
     selectedProducts = JSON.parse(saved);
   } catch (error) {
@@ -92,6 +93,7 @@ function applyDirection() {
 
 async function loadProducts() {
   const response = await fetch("products.json");
+
   if (!response.ok) {
     throw new Error("Could not load products.json");
   }
@@ -346,10 +348,22 @@ async function callWorker(payload) {
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
+  const rawText = await response.text();
+  console.log("RAW WORKER RESPONSE:", rawText);
+
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch (error) {
+    throw new Error("Worker did not return valid JSON.");
+  }
 
   if (!response.ok) {
     throw new Error(data.error || "Request failed");
+  }
+
+  if (!data.answer) {
+    throw new Error("Worker returned no answer.");
   }
 
   return data;
@@ -377,19 +391,25 @@ async function generateRoutine() {
 
     const data = await callWorker(payload);
 
+    console.log("FINAL DATA:", data);
+
     routineGenerated = true;
+
     chatHistory.push({
       role: "user",
       content: "Please create a routine using my selected products.",
     });
+
     chatHistory.push({
       role: "assistant",
       content: data.answer,
     });
 
     addMessage("assistant", data.answer, data.sources || []);
+    scrollChatToBottom();
   } catch (error) {
     addSystemMessage(`Error: ${error.message}`);
+    console.error(error);
   } finally {
     setLoadingState(false);
   }
@@ -422,14 +442,18 @@ async function sendFollowUp(messageText) {
 
     const data = await callWorker(payload);
 
+    console.log("FOLLOW UP DATA:", data);
+
     chatHistory.push({
       role: "assistant",
       content: data.answer,
     });
 
     addMessage("assistant", data.answer, data.sources || []);
+    scrollChatToBottom();
   } catch (error) {
     addSystemMessage(`Error: ${error.message}`);
+    console.error(error);
   } finally {
     setLoadingState(false);
   }
@@ -457,6 +481,7 @@ productsContainer.addEventListener("click", (event) => {
     if (!descriptionEl) return;
 
     const isHidden = descriptionEl.hasAttribute("hidden");
+
     if (isHidden) {
       descriptionEl.removeAttribute("hidden");
       descriptionBtn.textContent = "Hide Description";
@@ -493,7 +518,6 @@ rtlToggle.addEventListener("change", () => {
 });
 
 generateRoutineBtn.addEventListener("click", generateRoutine);
-
 clearSelectionsBtn.addEventListener("click", clearAllSelections);
 
 newChatBtn.addEventListener("click", () => {
@@ -537,6 +561,7 @@ async function init() {
     `;
     renderInitialChatState();
     addSystemMessage(`Error: ${error.message}`);
+    console.error(error);
   }
 }
 
